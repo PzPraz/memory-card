@@ -2,45 +2,62 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import Header from './components/Header'
 import CardsGrid from './components/CardsGrid';
+import { shuffleArray } from './utils/utils';
 
 function App() {
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [pokemonList, setPokemonList] = useState([]);
+  const [clickedList, setClickedList] = useState([]);
 
   function handleAddScore () {
-    setScore(score + 1);
-    setBestScore(Math.max(score, bestScore));
+    setScore((prevScore) => {
+      const newScore = prevScore + 1;
+      setBestScore((prevBest) => Math.max(newScore, prevBest));
+      return newScore;
+    });
   }
 
+  function handleClick (name) {
+    if (clickedList.includes(name)) {
+      handleReset() 
+      return;
+    }
+
+    handleAddScore()
+    setClickedList([...clickedList, name]);
+    setPokemonList(shuffleArray(pokemonList));
+  }
+
+  function handleReset () {
+    setScore(0);
+    setClickedList([]);
+    setPokemonList(shuffleArray(pokemonList));
+  }
+
+
+
   useEffect(() => {
-    async function fetchPokemon() {
-      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=12");
-      const data = await res.json();
+    async function fetchRandomPokemon() {
+      const randomIds = Array.from(new Set( // no duplicates
+        Array.from({ length: 10 }, () => Math.floor(Math.random() * 1025) + 1)
+      ));
+  
       const detailedData = await Promise.all(
-        data.results.map(async (poke) => {
-          const res = await fetch(poke.url);
+        randomIds.map(async (id) => {
+          const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
           return await res.json();
         })
       )
       setPokemonList(detailedData);
     }
-    fetchPokemon();
+    fetchRandomPokemon();
   }, [])
-
-
-  useEffect(() => {
-    console.log(pokemonList);
-    
-  }, [pokemonList])
 
   return (
     <>
       <Header score={score} bestScore={bestScore}></Header>
-      <CardsGrid handleScore={handleAddScore}></CardsGrid>
-      <div className="hello">
-        {        }
-      </div>
+      <CardsGrid handleScore={handleAddScore} pokemonList={pokemonList} handleClick={handleClick}/>
     </>
   )
 }
